@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный тренажёр: Русский язык</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-bg: #d1fae5;
+            --error: #ef4444;
+            --error-bg: #fee2e2;
+            --warning: #f59e0b;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { background: var(--card); max-width: 780px; width: 100%; border-radius: 24px; box-shadow: 0 15px 35px rgba(79, 70, 229, 0.12); padding: 30px; margin-top: 10px; animation: popIn 0.4s ease; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h1 { font-size: 1.35rem; margin: 0; color: var(--primary); }
+        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .badge { background: #e0e7ff; color: var(--primary); padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.9rem; }
+        .retry-badge { background: #fef3c7; color: #b45309; padding: 5px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; margin-left: 8px; display: inline-block; animation: popIn 0.3s ease; }
+        .sound-btn { background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .sound-btn:hover { border-color: var(--primary); transform: scale(1.08); }
+        .progress-wrapper { margin-bottom: 24px; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+        .progress-bar { width: 100%; height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #10b981); width: 0%; transition: width 0.5s ease; }
+        .topics-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 20px; }
+        .topic-card { border: 2px solid #e0e7ff; background: #f8fafc; border-radius: 18px; padding: 20px; transition: all 0.25s ease; cursor: pointer; }
+        .topic-card:hover:not(.locked) { border-color: var(--primary); background: #ffffff; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.1); }
+        .topic-card.locked { opacity: 0.6; cursor: not-allowed; background: #f3f4f6; border-color: #e5e7eb; }
+        .topic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .topic-title { font-size: 1.2rem; font-weight: 800; color: var(--text); }
+        .status-pill { font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: #fef3c7; color: #92400e; }
+        .status-pill.done { background: var(--success-bg); color: #065f46; }
+        .step-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; }
+        .step-desc { color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+        .theory-box { background: #f8fafc; border-left: 4px solid var(--primary); padding: 16px 20px; border-radius: 12px; margin-bottom: 18px; }
+        .theory-box h3 { margin-top: 0; font-size: 1.05rem; color: var(--primary); }
+        .theory-box ul { margin: 8px 0 0 0; padding-left: 20px; line-height: 1.6; }
+        .phrase-stage-box { background: #eef2ff; padding: 35px 20px 25px 20px; border-radius: 18px; margin: 20px 0; position: relative; text-align: center; }
+        .arrow-svg { width: 100%; height: 65px; display: block; overflow: visible; margin-bottom: -8px; }
+        .arrow-path { fill: none; stroke: var(--primary); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 400; stroke-dashoffset: 400; animation: drawArrow 0.7s ease forwards; }
+        .arrow-label { fill: var(--primary); font-size: 15px; font-weight: 800; text-anchor: middle; opacity: 0; animation: fadeIn 0.4s ease 0.35s forwards; }
+        .words-row { display: flex; justify-content: center; align-items: center; gap: 28px; flex-wrap: wrap; }
+        .phrase-display { font-size: 1.8rem; font-weight: 700; text-align: center; background: #eef2ff; padding: 25px; border-radius: 16px; margin: 20px 0; }
+        .word-btn { display: inline-block; padding: 10px 20px; background: #ffffff; border: 2px solid #c7d2fe; border-radius: 14px; cursor: pointer; font-size: 1.55rem; font-weight: 700; transition: all 0.25s; position: relative; }
+        .word-btn:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-3px); }
+        .word-btn.selected-main { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); }
+        .word-btn.selected-main::after { content: "×"; position: absolute; top: -14px; right: -8px; background: var(--warning); color: #fff; font-size: 1.1rem; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .word-btn.dependent-word { border-color: var(--success); background: #ecfdf5; color: #065f46; }
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 15px; }
+        .opt-btn { padding: 14px 18px; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: left; transition: all 0.2s; }
+        .opt-btn:hover:not(:disabled) { border-color: var(--primary); background: #f5f3ff; }
+        .opt-btn.correct { background: var(--success-bg); border-color: var(--success); color: #065f46; }
+        .opt-btn.wrong { background: var(--error-bg); border-color: var(--error); color: #991b1b; animation: shake 0.4s ease; }
+        .question-input-wrap { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 15px; flex-wrap: wrap; }
+        .q-text-input { padding: 12px 16px; font-size: 1.15rem; font-weight: 700; border: 2px solid #c7d2fe; border-radius: 12px; width: 260px; text-align: center; outline: none; }
+        .q-text-input:focus { border-color: var(--primary); }
+        .feedback { margin-top: 18px; padding: 15px; border-radius: 12px; font-weight: 500; line-height: 1.5; display: none; }
+        .feedback.show { display: block; animation: fadeIn 0.3s ease; }
+        .feedback.ok { background: var(--success-bg); color: #065f46; border: 1px solid var(--success); }
+        .feedback.err { background: var(--error-bg); color: #991b1b; border: 1px solid var(--error); }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 14px 28px; font-size: 1.05rem; font-weight: 700; border-radius: 12px; cursor: pointer; margin-top: 20px; display: inline-block; }
+        .btn-main:hover { background: var(--primary-hover); }
+        .btn-ghost { background: transparent; color: var(--muted); border: 2px solid #e5e7eb; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 20px; margin-right: 10px; }
+        .sub-step { background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #e5e7eb; }
+        .sub-step label { display: block; font-weight: 700; margin-bottom: 8px; color: #374151; }
+        select { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #d1d5db; font-size: 1rem; background: white; }
+        .scheme-preview { background: #fffbeb; border: 2px dashed #f59e0b; padding: 15px; border-radius: 12px; margin-top: 15px; font-size: 1.1rem; text-align: center; }
+        @keyframes drawArrow { to { stroke-dashoffset: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-4px); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 id="mainTitle">📚 Тренажёр по русскому языку</h1>
+        <div class="header-controls">
+            <div class="badge" id="stageBadge">Выбор темы</div>
+            <button class="sound-btn" id="soundToggle" onclick="toggleSound()" title="Включить/выключить звук">🔊</button>
+        </div>
+    </div>
+
+    <div class="progress-wrapper hidden" id="progressWrapper">
+        <div class="progress-labels">
+            <span id="progressLabel">Прогресс подготовки к уроку</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 0: ВЫБОР ТЕМЫ -->
+    <div id="screen-topics">
+        <div class="step-title">Выбери тему для подготовки к уроку</div>
+        <div class="step-desc">Проходи этапы по порядку — каждый запуск генерирует новые слова и словосочетания!</div>
+        <div class="topics-grid">
+            <div class="topic-card" onclick="openTopic('slovosochetanie')">
+                <div class="topic-header">
+                    <span class="topic-title">1. Разбор словосочетаний</span>
+                    <span class="status-pill" id="topic1-status">Не пройдено (0%)</span>
+                </div>
+                <div style="color: var(--muted); font-size: 0.95rem; margin-bottom: 10px;">
+                    Главное и зависимое слово, постановка вопроса (выбор и ввод вручную), части речи, средства связи и ловушки.
+                </div>
+                <div class="progress-bar" style="height: 8px;">
+                    <div class="progress-fill" id="topic1-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="topic-card locked">
+                <div class="topic-header">
+                    <span class="topic-title">2. Главные и второстепенные члены</span>
+                    <span class="status-pill" style="background: #e5e7eb; color: #6b7280;">Скоро</span>
+                </div>
+                <div style="color: var(--muted); font-size: 0.95rem;">Раздел находится в разработке и скоро станет доступен.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 1: ТЕОРИЯ -->
+    <div id="screen-theory" class="hidden">
+        <div class="step-title">Шаг 1. Повторяем правила перед боем</div>
+        <div class="step-desc">Внимательно прочитай памятку — она поможет пройти все уровни без ошибок!</div>
+        <div class="theory-box">
+            <h3>1. Что такое словосочетание?</h3>
+            <p>Это два (или более) самостоятельных слова, связанных по смыслу и грамматически. Одно слово — <b>главное (×)</b>, от него задаётся вопрос к <b>зависимому</b>.</p>
+            <p><i>Пример:</i> читать (×) ➔ <i>(что?)</i> книгу.</p>
+        </div>
+        <div class="theory-box">
+            <h3>2. Что НЕ является словосочетанием? (Ловушки!)</h3>
+            <ul>
+                <li><b>Грамматическая основа</b> (подлежащее + сказуемое): <i>дождь идёт, птицы поют</i>.</li>
+                <li><b>Однородные члены</b> (равноправны): <i>красный и синий, бегать и прыгать</i>.</li>
+                <li><b>Слово с предлогом</b> (предлог — служебное слово): <i>около дома, перед сном</i>.</li>
+                <li><b>Фразеологизмы</b> (устойчивые выражения): <i>бить баклуши, зарубить на носу</i>.</li>
+            </ul>
+        </div>
+        <div class="theory-box">
+            <h3>3. Порядок разбора словосочетания</h3>
+            <ul>
+                <li>Найти <b>главное (×)</b> и <b>зависимое</b> слово, задать вопрос.</li>
+                <li>Определить <b>часть речи главного слова</b>.</li>
+                <li>Определить <b>часть речи зависимого слова</b>.</li>
+                <li>Указать <b>средства связи</b>: только <i>окончание</i> зависимого слова ИЛИ <i>окончание и предлог</i> (у неизменяемых слов, например наречий, связи по окончанию нет — только по смыслу).</li>
+            </ul>
+        </div>
+        <button class="btn-ghost" onclick="backToTopics()">← К выбору тем</button>
+        <button class="btn-main" onclick="startStage2()">Всё понятно! Начать тренировку ➔</button>
+    </div>
+    <!-- ЭКРАН 2: ОХОТА НА ЛОВУШКИ -->
+    <div id="screen-stage2" class="hidden">
+        <div class="step-title">Этап 2. Охота на ловушки</div>
+        <div class="step-desc">Определи: перед тобой <b>словосочетание</b> или <b>НЕ словосочетание</b>?</div>
+        <div>
+            <span class="badge" id="s2-counter">Вопрос 1 из 6</span>
+            <span class="retry-badge hidden" id="s2-retry">🔄 Закрепление после ошибки</span>
+        </div>
+        <div class="phrase-display" id="s2-phrase">Солнце светит</div>
+        <div class="options-grid" id="s2-options">
+            <button class="opt-btn" onclick="checkStage2(true, this)">✅ Это словосочетание</button>
+            <button class="opt-btn" onclick="checkStage2(false, this)">❌ Это НЕ словосочетание</button>
+        </div>
+        <div class="feedback" id="s2-feedback"></div>
+        <button class="btn-main hidden" id="s2-next" onclick="nextStage2()">Дальше ➔</button>
+    </div>
+
+    <!-- ЭКРАН 3.1: ВЫБОР ВОПРОСА -->
+    <div id="screen-stage3" class="hidden">
+        <div class="step-title">Этап 3.1. Главное слово и выбор вопроса</div>
+        <div class="step-desc">Сначала <b>нажми на главное слово</b> (от которого задаём вопрос), а затем выбери правильный вопрос.</div>
+        <div>
+            <span class="badge" id="s3-counter">Задание 1 из 4</span>
+            <span class="retry-badge hidden" id="s3-retry">🔄 Закрепление после ошибки</span>
+        </div>
+        <div class="phrase-stage-box" id="s3-stage-box">
+            <svg class="arrow-svg" id="arrow-svg"></svg>
+            <div class="words-row" id="s3-words"></div>
+        </div>
+        <div id="s3-question-block" class="hidden">
+            <p><b>Отлично! Главное слово отмечено крестиком (×) и проведена стрелка к зависимому. Выбери вопрос:</b></p>
+            <div class="options-grid" id="s3-q-options"></div>
+        </div>
+        <div class="feedback" id="s3-feedback"></div>
+        <button class="btn-main hidden" id="s3-next" onclick="nextStage3()">Дальше ➔</button>
+    </div>
+
+    <!-- ЭКРАН 3.2: ВПИШИ ВОПРОС САМ -->
+    <div id="screen-stage3b" class="hidden">
+        <div class="step-title">Этап 3.2. Впиши вопрос сам</div>
+        <div class="step-desc">Сначала <b>нажми на главное слово</b>, а затем напиши вопрос к зависимому слову с клавиатуры (можно без знака вопроса и любыми буквами).</div>
+        <div>
+            <span class="badge" id="s3b-counter">Задание 1 из 4</span>
+            <span class="retry-badge hidden" id="s3b-retry">🔄 Закрепление после ошибки</span>
+        </div>
+        <div class="phrase-stage-box" id="s3b-stage-box">
+            <svg class="arrow-svg" id="arrow-svg-b"></svg>
+            <div class="words-row" id="s3b-words"></div>
+        </div>
+        <div id="s3b-input-block" class="hidden">
+            <p><b>Отлично! Главное слово отмечено крестиком (×). Впиши вопрос в поле ниже:</b></p>
+            <div class="question-input-wrap">
+                <input type="text" id="s3b-input" class="q-text-input" placeholder="Например: какой или где" autocomplete="off">
+                <button class="btn-main" style="margin-top: 0;" id="s3b-check-btn" onclick="checkStage3bInput()">Проверить ✔</button>
+            </div>
+        </div>
+        <div class="feedback" id="s3b-feedback"></div>
+        <button class="btn-main hidden" id="s3b-next" onclick="nextStage3b()">Дальше ➔</button>
+    </div>
+    <!-- ЭКРАН 4: ПОЛНЫЙ РАЗБОР -->
+    <div id="screen-stage4" class="hidden">
+        <div class="step-title">Этап 4. Полный разбор словосочетания</div>
+        <div class="step-desc">Выполни разбор строго по школьному плану. Заполни все пункты и проверь себя!</div>
+        <div>
+            <span class="badge" id="s4-counter">Разбор 1 из 4</span>
+            <span class="retry-badge hidden" id="s4-retry">🔄 Закрепление после ошибки</span>
+        </div>
+        <div class="phrase-display" id="s4-phrase">гулять в парке</div>
+        <div class="sub-step">
+            <label>1. Укажи главное слово (×):</label>
+            <select id="s4-main"></select>
+        </div>
+        <div class="sub-step">
+            <label>2. Какой частью речи выражено ГЛАВНОЕ слово?</label>
+            <select id="s4-main-pos">
+                <option value="">-- Выбери часть речи --</option>
+                <option value="сущ">Имя существительное</option>
+                <option value="глаг">Глагол</option>
+                <option value="прил">Имя прилагательное</option>
+                <option value="нареч">Наречие</option>
+            </select>
+        </div>
+        <div class="sub-step">
+            <label>3. Какой частью речи выражено ЗАВИСИМОЕ слово?</label>
+            <select id="s4-dep-pos">
+                <option value="">-- Выбери часть речи --</option>
+                <option value="сущ">Имя существительное</option>
+                <option value="глаг">Глагол</option>
+                <option value="прил">Имя прилагательное</option>
+                <option value="нареч">Наречие</option>
+            </select>
+        </div>
+        <div class="sub-step">
+            <label>4. Средства грамматической связи:</label>
+            <select id="s4-link">
+                <option value="">-- Выбери средство связи --</option>
+                <option value="окончание">Только окончание зависимого слова</option>
+                <option value="окончание и предлог">Окончание зависимого слова и предлог</option>
+                <option value="только по смыслу">Только по смыслу (зависимое слово не изменяется)</option>
+            </select>
+        </div>
+        <button class="btn-main" id="s4-check-btn" onclick="checkStage4()">Проверить разбор ✔</button>
+        <div class="feedback" id="s4-feedback"></div>
+        <div class="scheme-preview hidden" id="s4-scheme"></div>
+        <button class="btn-main hidden" id="s4-next" onclick="nextStage4()">Следующий разбор ➔</button>
+    </div>
+
+    <!-- ЭКРАН 5: ФИНАЛ -->
+    <div id="screen-final" class="hidden">
+        <div class="step-title">🎉 Подготовка завершена!</div>
+        <div class="phrase-display" id="final-score">Результат: 0 баллов</div>
+        <div class="theory-box" id="final-verdict"></div>
+        <div class="theory-box">
+            <h3>Короткая шпаргалка перед выходом к доске:</h3>
+            <ul>
+                <li>Подлежащее + сказуемое = <b>НЕ</b> словосочетание!</li>
+                <li>Предлог + существительное = <b>НЕ</b> словосочетание!</li>
+                <li>Крестик (<b>×</b>) ставим над <b>главным</b> словом, от него тянем стрелку к зависимому.</li>
+                <li>Обязательно называем <b>части речи обоих слов</b> и <b>средство связи</b> (окончание / окончание + предлог).</li>
+            </ul>
+        </div>
+        <button class="btn-ghost" onclick="backToTopics()">← К выбору тем</button>
+        <button class="btn-main" onclick="restartTopic()">Пройти тему ещё раз 🔄</button>
+    </div>
+</div>
+<script>
+    // --- ЗВУКОВОЙ ДВИЖОК ---
+    let soundEnabled = true;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playTone(freqs, durations, type = "sine", vol = 0.15) {
+        if (!soundEnabled) return;
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+
+        let time = audioCtx.currentTime;
+        freqs.forEach((f, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(f, time);
+            gain.gain.setValueAtTime(vol, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + durations[i]);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + durations[i]);
+            time += durations[i] * 0.75;
+        });
+    }
+
+    function playSoundCorrect() { playTone(Array.of(523.25, 659.25, 783.99), Array.of(0.12, 0.12, 0.25), "triangle", 0.18); }
+    function playSoundWrong() { playTone(Array.of(220, 185), Array.of(0.18, 0.28), "sawtooth", 0.12); }
+    function playSoundClick() { playTone(Array.of(440), Array.of(0.07), "sine", 0.1); }
+    function playSoundWin() { playTone(Array.of(523.25, 659.25, 783.99, 1046.5), Array.of(0.14, 0.14, 0.14, 0.45), "triangle", 0.2); }
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        document.getElementById("soundToggle").innerText = soundEnabled ? "🔊" : "🔇";
+    }
+
+    // --- СОХРАНЕНИЕ ПРОГРЕССА ---
+    function loadTopicProgress() {
+        const saved = localStorage.getItem("ru_topic1_best");
+        const pill = document.getElementById("topic1-status");
+        const bar = document.getElementById("topic1-bar");
+        if (saved !== null) {
+            const pct = parseInt(saved, 10);
+            bar.style.width = pct + "%";
+            if (pct >= 85) {
+                pill.innerText = `Готов к уроку! (${pct}%)`;
+                pill.className = "status-pill done";
+            } else {
+                pill.innerText = `В процессе (${pct}%)`;
+                pill.className = "status-pill";
+            }
+        }
+    }
+
+    function saveTopicProgress(pct) {
+        const prev = parseInt(localStorage.getItem("ru_topic1_best") || "0", 10);
+        if (pct > prev) localStorage.setItem("ru_topic1_best", pct);
+        loadTopicProgress();
+    }
+    // --- СЛОВАРИ ДЛЯ ПРОЦЕДУРНОГО ГЕНЕРАТОРА ---
+    const dict = {
+        masc: [
+            { adj: "осенний", adjStem: "осенн", adjEnd: "ий", noun: "ветер", nounStem: "ветер", nounEnd: "☐" },
+            { adj: "зимний", adjStem: "зимн", adjEnd: "ий", noun: "день", nounStem: "день", nounEnd: "☐" },
+            { adj: "тёплый", adjStem: "тёпл", adjEnd: "ый", noun: "шарф", nounStem: "шарф", nounEnd: "☐" },
+            { adj: "высокий", adjStem: "высок", adjEnd: "ий", noun: "дуб", nounStem: "дуб", nounEnd: "☐" },
+            { adj: "интересный", adjStem: "интересн", adjEnd: "ый", noun: "рассказ", nounStem: "рассказ", nounEnd: "☐" },
+            { adj: "свежий", adjStem: "свеж", adjEnd: "ий", noun: "хлеб", nounStem: "хлеб", nounEnd: "☐" }
+        ],
+        fem: [
+            { adj: "холодная", adjStem: "холодн", adjEnd: "ая", noun: "вода", nounStem: "вод", nounEnd: "а" },
+            { adj: "спелая", adjStem: "спел", adjEnd: "ая", noun: "груша", nounStem: "груш", nounEnd: "а" },
+            { adj: "звонкая", adjStem: "звонк", adjEnd: "ая", noun: "песня", nounStem: "песн", nounEnd: "я" },
+            { adj: "интересная", adjStem: "интересн", adjEnd: "ая", noun: "книга", nounStem: "книг", nounEnd: "а" },
+            { adj: "зелёная", adjStem: "зелён", adjEnd: "ая", noun: "трава", nounStem: "трав", nounEnd: "а" }
+        ],
+        neut: [
+            { adj: "тёплое", adjStem: "тёпл", adjEnd: "ое", noun: "молоко", nounStem: "молок", nounEnd: "о" },
+            { adj: "красное", adjStem: "красн", adjEnd: "ое", noun: "яблоко", nounStem: "яблок", nounEnd: "о" },
+            { adj: "синее", adjStem: "син", adjEnd: "ее", noun: "море", nounStem: "мор", nounEnd: "е" },
+            { adj: "яркое", adjStem: "ярк", adjEnd: "ое", noun: "солнце", nounStem: "солнц", nounEnd: "е" }
+        ],
+        verbObj: [
+            { verb: "читать", obj: "книгу", stem: "книг", end: "у", q: ["что"], dispQ: "что?" },
+            { verb: "рисовать", obj: "пейзаж", stem: "пейзаж", end: "☐", q: ["что"], dispQ: "что?" },
+            { verb: "строить", obj: "дом", stem: "дом", end: "☐", q: ["что"], dispQ: "что?" },
+            { verb: "учить", obj: "правило", stem: "правил", end: "о", q: ["что"], dispQ: "что?" },
+            { verb: "писать", obj: "письмо", stem: "письм", end: "о", q: ["что"], dispQ: "что?" },
+            { verb: "подарить", obj: "другу", stem: "друг", end: "у", q: ["кому"], dispQ: "кому?" },
+            { verb: "помогать", obj: "бабушке", stem: "бабушк", end: "е", q: ["кому"], dispQ: "кому?" }
+        ],
+        verbPrep: [
+            { verb: "гулять", prep: "в", noun: "парке", stem: "парк", end: "е", q: ["где", "в чём", "в чем"], dispQ: "где? / в чём?" },
+            { verb: "жить", prep: "в", noun: "деревне", stem: "деревн", end: "е", q: ["где", "в чём", "в чем"], dispQ: "где? / в чём?" },
+            { verb: "писать", prep: "в", noun: "тетради", stem: "тетрад", end: "и", q: ["где", "в чём", "в чем"], dispQ: "где? / в чём?" },
+            { verb: "бежать", prep: "по", noun: "тропинке", stem: "тропинк", end: "е", q: ["где", "по чему"], dispQ: "где? / по чему?" },
+            { verb: "плыть", prep: "по", noun: "реке", stem: "рек", end: "е", q: ["где", "по чему"], dispQ: "где? / по чему?" },
+            { verb: "сидеть", prep: "на", noun: "скамейке", stem: "скамейк", end: "е", q: ["где", "на чём", "на чем"], dispQ: "где? / на чём?" },
+            { verb: "выйти", prep: "из", noun: "леса", stem: "лес", end: "а", q: ["откуда", "из чего"], dispQ: "откуда? / из чего?" }
+        ],
+        verbAdv: [
+            { verb: "бежать", adv: "быстро" }, { verb: "смеяться", adv: "громко" }, { verb: "говорить", adv: "тихо" },
+            { verb: "петь", adv: "звонко" }, { verb: "писать", adv: "аккуратно" }, { verb: "светить", adv: "ярко" }
+        ],
+        nounGen: [
+            { main: "ветка", dep: "сирени", stem: "сирен", end: "и" }, { main: "лист", dep: "берёзы", stem: "берёз", end: "ы" },
+            { main: "луч", dep: "солнца", stem: "солнц", end: "а" }, { main: "берег", dep: "реки", stem: "рек", end: "и" },
+            { main: "крыша", dep: "дома", stem: "дом", end: "а" }
+        ],
+        trapsBasis: [
+            ["Дети", "играют"], ["Солнце", "светит"], ["Птицы", "улетели"], ["Дождь", "идёт"], ["Ветер", "дует"], ["Ученик", "пишет"]
+        ],
+        trapsPrep: [
+            ["Около", "школы"], ["Перед", "домом"], ["Вдоль", "реки"], ["Над", "лесом"], ["Через", "дорогу"], ["Под", "деревом"]
+        ],
+        trapsEqual: [
+            "Яблоки и груши", "Быстрый, но холодный", "Бегать и прыгать", "Красный и синий", "Бить баклуши", "Зарубить на носу", "Считать ворон", "Клевать носом"
+        ]
+    };
+
+    const usedKeys = new Set();
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function cap(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
+    // --- ГЕНЕРАТОР ЗАДАНИЙ ДЛЯ ЭТАПА 2 (ЛОВУШКИ) ---
+    function generateStage2Task(forcedType = null) {
+        const types = ["basis", "prep", "equal", "valid_adj", "valid_verb"];
+        const type = forcedType || pickRandom(types);
+
+        for (let attempt = 0; attempt < 25; attempt++) {
+            if (type === "basis") {
+                const pair = pickRandom(dict.trapsBasis);
+                const phrase = `${pair[0]} ${pair[1]}`;
+                if (!usedKeys.has("s2:" + phrase) || attempt === 24) {
+                    usedKeys.add("s2:" + phrase);
+                    return { ruleType: "basis", phrase, isPhrase: false, reason: `Это грамматическая основа (подлежащее «${pair[0].toLowerCase()}» и сказуемое «${pair[1]}»). Она не является словосочетанием!` };
+                }
+            } else if (type === "prep") {
+                const pair = pickRandom(dict.trapsPrep);
+                const phrase = `${pair[0]} ${pair[1]}`;
+                if (!usedKeys.has("s2:" + phrase) || attempt === 24) {
+                    usedKeys.add("s2:" + phrase);
+                    return { ruleType: "prep", phrase, isPhrase: false, reason: `«${pair[0]}» — предлог. Служебное слово с самостоятельным не образует словосочетание.` };
+                }
+            } else if (type === "equal") {
+                const phrase = pickRandom(dict.trapsEqual);
+                if (!usedKeys.has("s2:" + phrase) || attempt === 24) {
+                    usedKeys.add("s2:" + phrase);
+                    const isPhraseo = !phrase.includes(" и ") && !phrase.includes(", но ");
+                    const reason = isPhraseo
+                        ? "Это фразеологизм (устойчивое выражение). Он не делится на главное и зависимое слово."
+                        : "Это однородные члены предложения, они равноправны и не подчиняются друг другу.";
+                    return { ruleType: "equal", phrase, isPhrase: false, reason };
+                }
+            } else if (type === "valid_adj") {
+                const gender = pickRandom(["masc", "fem", "neut"]);
+                const item = pickRandom(dict[gender]);
+                const q = gender === "masc" ? "какой?" : (gender === "fem" ? "какая?" : "какое?");
+                const phrase = `${cap(item.adj)} ${item.noun}`;
+                if (!usedKeys.has("s2:" + phrase) || attempt === 24) {
+                    usedKeys.add("s2:" + phrase);
+                    return { ruleType: "valid_adj", phrase, isPhrase: true, reason: `Верно! Главное слово «${item.noun}» (${q}) ${item.adj}.` };
+                }
+            } else {
+                const vp = pickRandom(dict.verbPrep);
+                const phrase = `${cap(vp.verb)} ${vp.prep} ${vp.noun}`;
+                if (!usedKeys.has("s2:" + phrase) || attempt === 24) {
+                    usedKeys.add("s2:" + phrase);
+                    return { ruleType: "valid_verb", phrase, isPhrase: true, reason: `Отлично! Главное слово «${vp.verb}» (${vp.dispQ}) ${vp.prep} ${vp.noun}.` };
+                }
+            }
+        }
+    }
+    // --- ГЕНЕРАТОР ЗАДАНИЙ ДЛЯ ЭТАПОВ 3.1 И 3.2 (ВОПРОСЫ) ---
+    function generateStage3Task(forcedType = null, isManual = false) {
+        const types = ["adj", "obj", "prep", "adv"];
+        const type = forcedType || pickRandom(types);
+        const prefix = isManual ? "s3b:" : "s3:";
+
+        for (let attempt = 0; attempt < 25; attempt++) {
+            if (type === "adj") {
+                const gender = pickRandom(["masc", "fem", "neut"]);
+                const item = pickRandom(dict[gender]);
+                const q = gender === "masc" ? "какой?" : (gender === "fem" ? "какая?" : "какое?");
+                const key = `${item.adj}_${item.noun}`;
+                if (!usedKeys.has(prefix + key) || attempt === 24) {
+                    usedKeys.add(prefix + key);
+                    return {
+                        ruleType: "adj",
+                        words: [cap(item.adj), item.noun],
+                        mainIndex: 1,
+                        questions: [q, "что?", "где?"],
+                        correctQ: q,
+                        acceptedQ: [q.replace("?", "")],
+                        displayQ: q,
+                        explanation: `${cap(item.noun)} (×) (${q}) ${item.adj}. Главное слово — существительное.`
+                    };
+                }
+            } else if (type === "obj") {
+                const vo = pickRandom(dict.verbObj);
+                const key = `${vo.verb}_${vo.obj}`;
+                if (!usedKeys.has(prefix + key) || attempt === 24) {
+                    usedKeys.add(prefix + key);
+                    const wrongQ = vo.dispQ === "что?" ? "какой?" : "где?";
+                    return {
+                        ruleType: "obj",
+                        words: [cap(vo.verb), vo.obj],
+                        mainIndex: 0,
+                        questions: [vo.dispQ, wrongQ, "когда?"],
+                        correctQ: vo.dispQ,
+                        acceptedQ: vo.q,
+                        displayQ: vo.dispQ,
+                        explanation: `${cap(vo.verb)} (×) (${vo.dispQ}) ${vo.obj}. Главное слово — глагол.`
+                    };
+                }
+            } else if (type === "prep") {
+                const vp = pickRandom(dict.verbPrep);
+                const key = `${vp.verb}_${vp.noun}`;
+                if (!usedKeys.has(prefix + key) || attempt === 24) {
+                    usedKeys.add(prefix + key);
+                    return {
+                        ruleType: "prep",
+                        words: [cap(vp.verb), `${vp.prep} ${vp.noun}`],
+                        mainIndex: 0,
+                        questions: [vp.dispQ, "какой?", "кто?"],
+                        correctQ: vp.dispQ,
+                        acceptedQ: vp.q,
+                        displayQ: vp.dispQ,
+                        explanation: `${cap(vp.verb)} (×) (${vp.dispQ}) ${vp.prep} ${vp.noun}.`
+                    };
+                }
+            } else {
+                const va = pickRandom(dict.verbAdv);
+                const key = `${va.adv}_${va.verb}`;
+                if (!usedKeys.has(prefix + key) || attempt === 24) {
+                    usedKeys.add(prefix + key);
+                    return {
+                        ruleType: "adv",
+                        words: [cap(va.adv), va.verb],
+                        mainIndex: 1,
+                        questions: ["как?", "какой?", "кого?"],
+                        correctQ: "как?",
+                        acceptedQ: ["как", "каким образом"],
+                        displayQ: "как?",
+                        explanation: `${cap(va.verb)} (×) (как?) ${va.adv}. Главное слово — глагол.`
+                    };
+                }
+            }
+        }
+    }
+    // --- ГЕНЕРАТОР ЗАДАНИЙ ДЛЯ ЭТАПА 4 (ПОЛНЫЙ РАЗБОР) ---
+    function generateStage4Task(forcedType = null) {
+        const types = ["adj_noun", "verb_prep", "noun_gen", "verb_adv"];
+        const type = forcedType || pickRandom(types);
+
+        for (let attempt = 0; attempt < 25; attempt++) {
+            if (type === "adj_noun") {
+                const gender = pickRandom(["masc", "fem", "neut"]);
+                const item = pickRandom(dict[gender]);
+                const q = gender === "masc" ? "какой?" : (gender === "fem" ? "какая?" : "какое?");
+                const phrase = `${item.adj} ${item.noun}`;
+                if (!usedKeys.has("s4:" + phrase) || attempt === 24) {
+                    usedKeys.add("s4:" + phrase);
+                    return {
+                        ruleType: "adj_noun",
+                        phrase,
+                        words: [item.adj, item.noun],
+                        mainWord: item.noun,
+                        mainPos: "сущ",
+                        depPos: "прил",
+                        link: "окончание",
+                        scheme: `${item.adjStem}<b>${item.adjEnd}</b> (прил.) ⟵ <i>(${q})</i> ${item.noun}× (сущ.) — связь с помощью окончания <b>-${item.adjEnd}</b>.`
+                    };
+                }
+            } else if (type === "verb_prep") {
+                const vp = pickRandom(dict.verbPrep);
+                const depWord = `${vp.prep} ${vp.noun}`;
+                const phrase = `${vp.verb} ${depWord}`;
+                if (!usedKeys.has("s4:" + phrase) || attempt === 24) {
+                    usedKeys.add("s4:" + phrase);
+                    return {
+                        ruleType: "verb_prep",
+                        phrase,
+                        words: [vp.verb, depWord],
+                        mainWord: vp.verb,
+                        mainPos: "глаг",
+                        depPos: "сущ",
+                        link: "окончание и предлог",
+                        scheme: `${vp.verb}× (гл.) ⟶ <i>(${vp.dispQ})</i> <b>${vp.prep}</b> ${vp.stem}<b>${vp.end}</b> (сущ.) — предлог <b>${vp.prep}</b> и окончание <b>-${vp.end}</b>.`
+                    };
+                }
+            } else if (type === "noun_gen") {
+                const ng = pickRandom(dict.nounGen);
+                const phrase = `${ng.main} ${ng.dep}`;
+                if (!usedKeys.has("s4:" + phrase) || attempt === 24) {
+                    usedKeys.add("s4:" + phrase);
+                    return {
+                        ruleType: "noun_gen",
+                        phrase,
+                        words: [ng.main, ng.dep],
+                        mainWord: ng.main,
+                        mainPos: "сущ",
+                        depPos: "сущ",
+                        link: "окончание",
+                        scheme: `${ng.main}× (сущ.) ⟶ <i>(чего?)</i> ${ng.stem}<b>${ng.end}</b> (сущ.) — окончание <b>-${ng.end}</b>.`
+                    };
+                }
+            } else {
+                const va = pickRandom(dict.verbAdv);
+                const phrase = `${va.verb} ${va.adv}`;
+                if (!usedKeys.has("s4:" + phrase) || attempt === 24) {
+                    usedKeys.add("s4:" + phrase);
+                    return {
+                        ruleType: "verb_adv",
+                        phrase,
+                        words: [va.verb, va.adv],
+                        mainWord: va.verb,
+                        mainPos: "глаг",
+                        depPos: "нареч",
+                        link: "только по смыслу",
+                        scheme: `${va.verb}× (гл.) ⟶ <i>(как?)</i> ${va.adv} (нареч.) — наречие не изменяется, связь <b>только по смыслу</b>.`
+                    };
+                }
+            }
+        }
+    }
+    let score = 0;
+    let totalTasks = 0;
+    let completedTasks = 0;
+
+    let queue2 = [], queue3 = [], queue3b = [], queue4 = [];
+    let s2Idx = 0, s3Idx = 0, s3bIdx = 0, s4Idx = 0;
+
+    function hideAllScreens() {
+        new Array("screen-topics", "screen-theory", "screen-stage2", "screen-stage3", "screen-stage3b", "screen-stage4", "screen-final")
+            .forEach(id => document.getElementById(id).classList.add("hidden"));
+    }
+
+    function openTopic(topicId) {
+        playSoundClick();
+        score = 0;
+        completedTasks = 0;
+        usedKeys.clear();
+
+        queue2 = new Array("basis", "prep", "equal", "valid_adj", "valid_verb", "basis").map(t => ({ ...generateStage2Task(t), isRetry: false }));
+        queue3 = new Array("adj", "obj", "prep", "adv").map(t => ({ ...generateStage3Task(t, false), isRetry: false }));
+        queue3b = new Array("adj", "obj", "prep", "adv").map(t => ({ ...generateStage3Task(t, true), isRetry: false }));
+        queue4 = new Array("adj_noun", "verb_prep", "noun_gen", "verb_adv").map(t => ({ ...generateStage4Task(t), isRetry: false }));
+
+        totalTasks = queue2.length + queue3.length + queue3b.length + queue4.length;
+        s2Idx = 0; s3Idx = 0; s3bIdx = 0; s4Idx = 0;
+
+        hideAllScreens();
+        document.getElementById("mainTitle").innerText = "🎓 Тема: Разбор словосочетаний";
+        document.getElementById("progressWrapper").classList.remove("hidden");
+        document.getElementById("screen-theory").classList.remove("hidden");
+        updateProgress("Этап 1 из 6: Теория");
+    }
+
+    function backToTopics() {
+        playSoundClick();
+        hideAllScreens();
+        document.getElementById("mainTitle").innerText = "📚 Тренажёр по русскому языку";
+        document.getElementById("progressWrapper").classList.add("hidden");
+        document.getElementById("stageBadge").innerText = "Выбор темы";
+        document.getElementById("screen-topics").classList.remove("hidden");
+        loadTopicProgress();
+    }
+
+    function restartTopic() { openTopic("slovosochetanie"); }
+
+    function updateProgress(stageText) {
+        document.getElementById("stageBadge").innerText = stageText;
+        const pct = totalTasks === 0 ? 0 : Math.min(100, Math.round((completedTasks / totalTasks) * 100));
+        document.getElementById("progressFill").style.width = pct + "%";
+        document.getElementById("progressPercent").innerText = pct + "%";
+    }
+
+    function startStage2() {
+        playSoundClick();
+        hideAllScreens();
+        document.getElementById("screen-stage2").classList.remove("hidden");
+        renderStage2();
+    }
+
+    function renderStage2() {
+        updateProgress("Этап 2 из 6: Ловушки");
+        const item = queue2[s2Idx];
+        document.getElementById("s2-counter").innerText = `Вопрос ${s2Idx + 1} из ${queue2.length}`;
+        document.getElementById("s2-retry").classList.toggle("hidden", !item.isRetry);
+        document.getElementById("s2-phrase").innerText = item.phrase;
+        document.getElementById("s2-feedback").className = "feedback";
+        document.getElementById("s2-next").classList.add("hidden");
+        document.querySelectorAll("#s2-options .opt-btn").forEach(b => { b.disabled = false; b.classList.remove("correct", "wrong"); });
+    }
+
+    function checkStage2(userChoice, btn) {
+        const item = queue2[s2Idx];
+        const fb = document.getElementById("s2-feedback");
+        document.querySelectorAll("#s2-options .opt-btn").forEach(b => b.disabled = true);
+
+        if (userChoice === item.isPhrase) {
+            btn.classList.add("correct");
+            fb.className = "feedback show ok";
+            fb.innerHTML = `<b>Правильно!</b> ${item.reason}`;
+            score++;
+            playSoundCorrect();
+        } else {
+            btn.classList.add("wrong");
+            fb.className = "feedback show err";
+            let extraMsg = "";
+            if (!item.addedSimilar) {
+                item.addedSimilar = true;
+                queue2.push({ ...generateStage2Task(item.ruleType), isRetry: true });
+                totalTasks++;
+                extraMsg = `<br><i>📌 Мы сгенерировали похожий пример в конец этого этапа для отработки!</i>`;
+            }
+            fb.innerHTML = `<b>Не совсем так!</b> ${item.reason}${extraMsg}`;
+            playSoundWrong();
+        }
+        completedTasks++;
+        updateProgress("Этап 2 из 6: Ловушки");
+        document.getElementById("s2-next").classList.remove("hidden");
+    }
+
+    function nextStage2() {
+        playSoundClick();
+        s2Idx++;
+        if (s2Idx < queue2.length) renderStage2();
+        else { hideAllScreens(); document.getElementById("screen-stage3").classList.remove("hidden"); renderStage3(); }
+    }
+
+    function drawRelationArrow(svgId, boxId, mainBtn, depBtn, questionText = "?") {
+        const svg = document.getElementById(svgId);
+        const boxRect = document.getElementById(boxId).getBoundingClientRect();
+        const mRect = mainBtn.getBoundingClientRect();
+        const dRect = depBtn.getBoundingClientRect();
+        const startX = mRect.left - boxRect.left + mRect.width / 2;
+        const endX = dRect.left - boxRect.left + dRect.width / 2;
+        const baseY = 58, peakY = 12, midX = (startX + endX) / 2;
+        const dir = endX > startX ? 1 : -1;
+        const arrowHead = `M ${endX} ${baseY} L ${endX - 9 * dir} ${baseY - 7} M ${endX} ${baseY} L ${endX - 3 * dir} ${baseY - 11}`;
+        svg.innerHTML = `<path class="arrow-path" d="M ${startX} ${baseY} Q ${midX} ${peakY} ${endX} ${baseY}" /><path class="arrow-path" d="${arrowHead}" /><text class="arrow-label" x="${midX}" y="${peakY + 8}">${questionText}</text>`;
+    }
+
+    function renderStage3() {
+        updateProgress("Этап 3 из 6: Выбор вопроса");
+        const item = queue3[s3Idx];
+        document.getElementById("s3-counter").innerText = `Задание ${s3Idx + 1} из ${queue3.length}`;
+        document.getElementById("s3-retry").classList.toggle("hidden", !item.isRetry);
+        document.getElementById("s3-question-block").classList.add("hidden");
+        document.getElementById("s3-feedback").className = "feedback";
+        document.getElementById("s3-next").classList.add("hidden");
+        document.getElementById("arrow-svg").innerHTML = "";
+
+        const container = document.getElementById("s3-words");
+        container.innerHTML = "";
+        item.words.forEach((w, idx) => {
+            const btn = document.createElement("button");
+            btn.className = "word-btn";
+            btn.id = `s3-word-${idx}`;
+            btn.innerText = w;
+            btn.onclick = () => selectMainWord3(idx, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function selectMainWord3(idx, btn) {
+        const item = queue3[s3Idx];
+        const fb = document.getElementById("s3-feedback");
+        if (idx === item.mainIndex) {
+            playSoundCorrect();
+            const depBtn = document.getElementById(`s3-word-${idx === 0 ? 1 : 0}`);
+            document.querySelectorAll("#s3-words .word-btn").forEach(b => b.disabled = true);
+            btn.classList.add("selected-main");
+            depBtn.classList.add("dependent-word");
+            fb.className = "feedback";
+            drawRelationArrow("arrow-svg", "s3-stage-box", btn, depBtn, "( ? )");
+
+            const qOpts = document.getElementById("s3-q-options");
+            qOpts.innerHTML = "";
+            [...item.questions].sort(() => Math.random() - 0.5).forEach(q => {
+                const qBtn = document.createElement("button");
+                qBtn.className = "opt-btn";
+                qBtn.innerText = q;
+                qBtn.onclick = () => checkStage3Question(q, qBtn, btn, depBtn);
+                qOpts.appendChild(qBtn);
+            });
+            document.getElementById("s3-question-block").classList.remove("hidden");
+        } else {
+            playSoundWrong();
+            btn.style.animation = "shake 0.4s ease";
+            setTimeout(() => btn.style.animation = "", 400);
+            fb.className = "feedback show err";
+            fb.innerHTML = `Подумай ещё раз! От слова <b>«${item.words[idx]}»</b> нельзя задать вопрос ко второму слову.`;
+        }
+    }
+
+    function checkStage3Question(selectedQ, btn, mainBtn, depBtn) {
+        const item = queue3[s3Idx];
+        const fb = document.getElementById("s3-feedback");
+        document.querySelectorAll("#s3-q-options .opt-btn").forEach(b => b.disabled = true);
+        drawRelationArrow("arrow-svg", "s3-stage-box", mainBtn, depBtn, `(${item.correctQ})`);
+
+        if (selectedQ === item.correctQ) {
+            btn.classList.add("correct");
+            fb.className = "feedback show ok";
+            fb.innerHTML = `<b>Супер!</b> ${item.explanation}`;
+            score++;
+            playSoundCorrect();
+        } else {
+            btn.classList.add("wrong");
+            fb.className = "feedback show err";
+            let extraMsg = "";
+            if (!item.addedSimilar) {
+                item.addedSimilar = true;
+                queue3.push({ ...generateStage3Task(item.ruleType, false), isRetry: true });
+                totalTasks++;
+                extraMsg = `<br><i>📌 Сгенерировали похожее словосочетание в конец этапа для отработки!</i>`;
+            }
+            fb.innerHTML = `<b>Ошибка в вопросе.</b> Правильный вопрос: <b>${item.correctQ}</b>. ${item.explanation}${extraMsg}`;
+            playSoundWrong();
+        }
+        completedTasks++;
+        updateProgress("Этап 3 из 6: Выбор вопроса");
+        document.getElementById("s3-next").classList.remove("hidden");
+    }
+
+    function nextStage3() {
+        playSoundClick();
+        s3Idx++;
+        if (s3Idx < queue3.length) renderStage3();
+        else { hideAllScreens(); document.getElementById("screen-stage3b").classList.remove("hidden"); renderStage3b(); }
+    }
+    // --- ЭТАП 3.2: САМОСТОЯТЕЛЬНЫЙ ВВОД ВОПРОСА ---
+    function normalizeQuestion(str) {
+        return str.toLowerCase().replace(/\?/g, "").replace(/ё/g, "е").replace(/\s+/g, " ").trim();
+    }
+
+    function renderStage3b() {
+        updateProgress("Этап 4 из 6: Впиши вопрос сам");
+        const item = queue3b[s3bIdx];
+        document.getElementById("s3b-counter").innerText = `Задание ${s3bIdx + 1} из ${queue3b.length}`;
+        document.getElementById("s3b-retry").classList.toggle("hidden", !item.isRetry);
+        document.getElementById("s3b-input-block").classList.add("hidden");
+        document.getElementById("s3b-feedback").className = "feedback";
+        document.getElementById("s3b-next").classList.add("hidden");
+        document.getElementById("arrow-svg-b").innerHTML = "";
+
+        const input = document.getElementById("s3b-input");
+        input.value = "";
+        input.disabled = false;
+        document.getElementById("s3b-check-btn").classList.remove("hidden");
+
+        const container = document.getElementById("s3b-words");
+        container.innerHTML = "";
+        item.words.forEach((w, idx) => {
+            const btn = document.createElement("button");
+            btn.className = "word-btn";
+            btn.id = `s3b-word-${idx}`;
+            btn.innerText = w;
+            btn.onclick = () => selectMainWord3b(idx, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function selectMainWord3b(idx, btn) {
+        const item = queue3b[s3bIdx];
+        const fb = document.getElementById("s3b-feedback");
+        if (idx === item.mainIndex) {
+            playSoundCorrect();
+            const depBtn = document.getElementById(`s3b-word-${idx === 0 ? 1 : 0}`);
+            document.querySelectorAll("#s3b-words .word-btn").forEach(b => b.disabled = true);
+            btn.classList.add("selected-main");
+            depBtn.classList.add("dependent-word");
+            fb.className = "feedback";
+            drawRelationArrow("arrow-svg-b", "s3b-stage-box", btn, depBtn, "( ? )");
+
+            document.getElementById("s3b-input-block").classList.remove("hidden");
+            const input = document.getElementById("s3b-input");
+            input.focus();
+            input.onkeydown = (e) => { if (e.key === "Enter" && !input.disabled) checkStage3bInput(); };
+        } else {
+            playSoundWrong();
+            btn.style.animation = "shake 0.4s ease";
+            setTimeout(() => btn.style.animation = "", 400);
+            fb.className = "feedback show err";
+            fb.innerHTML = `Подумай ещё раз! От слова <b>«${item.words[idx]}»</b> нельзя задать вопрос.`;
+        }
+    }
+
+    function checkStage3bInput() {
+        const item = queue3b[s3bIdx];
+        const input = document.getElementById("s3b-input");
+        const userNorm = normalizeQuestion(input.value);
+        const fb = document.getElementById("s3b-feedback");
+
+        if (!userNorm) {
+            playSoundWrong();
+            fb.className = "feedback show err";
+            fb.innerHTML = "Впиши вопрос в поле перед проверкой!";
+            return;
+        }
+
+        input.disabled = true;
+        document.getElementById("s3b-check-btn").classList.add("hidden");
+
+        const mainBtn = document.getElementById(`s3b-word-${item.mainIndex}`);
+        const depBtn = document.getElementById(`s3b-word-${item.mainIndex === 0 ? 1 : 0}`);
+        const isCorrect = item.acceptedQ.map(q => normalizeQuestion(q)).includes(userNorm);
+
+        if (isCorrect) {
+            const shownQ = input.value.trim().endsWith("?") ? input.value.trim() : input.value.trim() + "?";
+            drawRelationArrow("arrow-svg-b", "s3b-stage-box", mainBtn, depBtn, `(${shownQ})`);
+            fb.className = "feedback show ok";
+            fb.innerHTML = `<b>Отлично!</b> ${item.explanation} (Возможные вопросы: <b>${item.displayQ}</b>)`;
+            score++;
+            playSoundCorrect();
+        } else {
+            drawRelationArrow("arrow-svg-b", "s3b-stage-box", mainBtn, depBtn, `(${item.displayQ})`);
+            fb.className = "feedback show err";
+            let extraMsg = "";
+            if (!item.addedSimilar) {
+                item.addedSimilar = true;
+                queue3b.push({ ...generateStage3Task(item.ruleType, true), isRetry: true });
+                totalTasks++;
+                extraMsg = `<br><i>📌 Сгенерировали похожее словосочетание в конец этапа для отработки!</i>`;
+            }
+            fb.innerHTML = `<b>Не совсем так.</b> Подходящий вопрос: <b>${item.displayQ}</b>. ${item.explanation}${extraMsg}`;
+            playSoundWrong();
+        }
+        completedTasks++;
+        updateProgress("Этап 4 из 6: Впиши вопрос сам");
+        document.getElementById("s3b-next").classList.remove("hidden");
+    }
+
+    function nextStage3b() {
+        playSoundClick();
+        s3bIdx++;
+        if (s3bIdx < queue3b.length) renderStage3b();
+        else { hideAllScreens(); document.getElementById("screen-stage4").classList.remove("hidden"); renderStage4(); }
+    }
+
+    // --- ЭТАП 4: ПОЛНЫЙ РАЗБОР ---
+    function renderStage4() {
+        updateProgress("Этап 5 из 6: Полный разбор");
+        const item = queue4[s4Idx];
+        document.getElementById("s4-counter").innerText = `Разбор ${s4Idx + 1} из ${queue4.length}`;
+        document.getElementById("s4-retry").classList.toggle("hidden", !item.isRetry);
+        document.getElementById("s4-phrase").innerText = item.phrase;
+
+        const mainSelect = document.getElementById("s4-main");
+        mainSelect.innerHTML = `<option value="">-- Выбери главное слово --</option>`;
+        item.words.forEach(w => { mainSelect.innerHTML += `<option value="${w}">${w}</option>`; });
+
+        document.getElementById("s4-main-pos").value = "";
+        document.getElementById("s4-dep-pos").value = "";
+        document.getElementById("s4-link").value = "";
+        document.getElementById("s4-feedback").className = "feedback";
+        document.getElementById("s4-scheme").classList.add("hidden");
+        document.getElementById("s4-next").classList.add("hidden");
+        document.getElementById("s4-check-btn").classList.remove("hidden");
+    }
+
+    function checkStage4() {
+        const item = queue4[s4Idx];
+        const mWord = document.getElementById("s4-main").value;
+        const mPos = document.getElementById("s4-main-pos").value;
+        const dPos = document.getElementById("s4-dep-pos").value;
+        const link = document.getElementById("s4-link").value;
+        const fb = document.getElementById("s4-feedback");
+
+        if (!mWord || !mPos || !dPos || !link) {
+            playSoundWrong();
+            fb.className = "feedback show err";
+            fb.innerHTML = "Пожалуйста, заполни все 4 пункта разбора перед проверкой!";
+            return;
+        }
+
+        let errors = [];
+        if (mWord !== item.mainWord) errors.push(`главное слово — «${item.mainWord}»`);
+        if (mPos !== item.mainPos) errors.push(`проверь часть речи главного слова`);
+        if (dPos !== item.depPos) errors.push(`проверь часть речи зависимого слова`);
+        if (link !== item.link) errors.push(`проверь средство связи`);
+
+        if (errors.length === 0) {
+            fb.className = "feedback show ok";
+            fb.innerHTML = "<b>Идеально!</b> Весь разбор выполнен без единой ошибки!";
+            score++;
+            playSoundCorrect();
+        } else {
+            fb.className = "feedback show err";
+            let extraMsg = "";
+            if (!item.addedSimilar) {
+                item.addedSimilar = true;
+                queue4.push({ ...generateStage4Task(item.ruleType), isRetry: true });
+                totalTasks++;
+                extraMsg = `<br><i>📌 Сгенерировали похожее словосочетание в конец этапа для отработки!</i>`;
+            }
+            fb.innerHTML = `<b>Есть неточности:</b> ${errors.join("; ")}.${extraMsg}`;
+            playSoundWrong();
+        }
+
+        const schemeBox = document.getElementById("s4-scheme");
+        schemeBox.innerHTML = `<b>Образец записи в тетради:</b><br>${item.scheme}`;
+        schemeBox.classList.remove("hidden");
+        document.getElementById("s4-check-btn").classList.add("hidden");
+        document.getElementById("s4-next").classList.remove("hidden");
+        completedTasks++;
+        updateProgress("Этап 5 из 6: Полный разбор");
+    }
+
+    function nextStage4() {
+        playSoundClick();
+        s4Idx++;
+        if (s4Idx < queue4.length) renderStage4();
+        else showFinalScreen();
+    }
+
+    function showFinalScreen() {
+        hideAllScreens();
+        document.getElementById("screen-final").classList.remove("hidden");
+        updateProgress("Готово! Итоги");
+        playSoundWin();
+
+        const percent = Math.round((score / totalTasks) * 100);
+        saveTopicProgress(percent);
+        document.getElementById("final-score").innerText = `Верных ответов: ${score} из ${totalTasks} (${percent}%)`;
+
+        const verdict = document.getElementById("final-verdict");
+        if (percent >= 85) {
+            verdict.innerHTML = `<h3>🌟 Оценка: 5 (Отлично!)</h3><p>Ты полностью готов к уроку! Прогресс сохранён на главном экране.</p>`;
+        } else if (percent >= 60) {
+            verdict.innerHTML = `<h3>👍 Оценка: 4 (Хорошо!)</h3><p>Хороший результат! Пройди тему ещё раз, чтобы довести готовность до 100%.</p>`;
+        } else {
+            verdict.innerHTML = `<h3>💪 Нужно ещё потренироваться</h3><p>Перечитай памятку в начале темы и попробуй пройти задания снова.</p>`;
+        }
+    }
+
+    loadTopicProgress();
+</script>
+
+</body>
+</html>
